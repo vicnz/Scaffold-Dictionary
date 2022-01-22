@@ -56,7 +56,7 @@ def insertInto(data):
         cursor = db.cursor()
         cursor.execute(insertSQL, data)
         db.commit()
-        print(cursor.lastrowid)
+        print("Item Added ", cursor.lastrowid, " = [word] -> ", data[0])
     except Exception as e:
         print("Error Creating Table", e.with_traceback)
         raise Exception("Database Error")

@@ -1,6 +1,7 @@
 from pprint import pprint
 from bs4 import BeautifulSoup as BS
-import LoopThrough
+from wordType import wordType
+from LoopThrough import loopThrough
 import requests
 import db
 import json
@@ -35,9 +36,7 @@ def App(_url, index):
             
             # Type
             defType = groupItem.findChild(class_='ps')
-            # TODO:
-            # - Identify Which Word Type Based on the 'className' (last item)
-            definitionItem['type'] = defType.get_attribute_list('class')
+            definitionItem['type'] = wordType(defType.get_attribute_list('class')[-1])
             
             # Definition
             descriptions = groupItem.findChild(class_='gl')
@@ -67,26 +66,66 @@ def App(_url, index):
                 exampleList.append(sampleItem)
 
             definitionItem['samples'] = exampleList # add list to the parent object
+
+            # Grammar
+            grammar = groupItem.findChild(class_='eg').text if groupItem.findChild(class_='eg') != None else None
+            definitionItem['grammar'] = grammar
+
+            # Cultural Meaning
+            culturalNote = groupItem.findChild(class_='ec').text if groupItem.findChild(class_='ec') != None else None             
+            definitionItem['cultural_note'] = culturalNote
             
-            # Related Words
+            # Semantics
+            semantics = groupItem.findChildren(class_='es') if groupItem.findChildren(class_='es') != None else []
+            semanticsSampleList = []
+            for semanticSample in semantics:
+                semanticsSampleList.append(semanticSample.text)
+            definitionItem['semantics'] = semanticsSampleList;
+
+            # Morphonemics
+            morphophonemics = groupItem.findChildren(class_='mo') if groupItem.findChildren(class_='mo') != None else []
+            morphophonemicsList = []
+            for morpho in morphophonemics:
+                morphophonemicsList.append(morpho.text)
+            definitionItem['morphophonemics'] = morphophonemicsList
+
+            # Synonyms Words
             synonyms = groupItem.findChild(class_='rsGroup')
-            relatedWords = groupItem.findChild(class_='reGroup')        
+            
+            #related
+            relatedWords = groupItem.findChild(class_='reGroup')
+
+            # Antonyms
+            antonyms = groupItem.findChild(class_='raGroup')        
             
             definitionItem['synonym'] = synonyms.text if synonyms != None else None
             definitionItem['related'] = relatedWords.text if relatedWords != None else None
+            definitionItem['antonym'] = antonyms.text if antonyms != None else None
 
-            # Other Definitions
-            otherDefinition = groupItem.findChild(class_='ode')
-            otherDefinitionDesc = otherDefinition.find_next_sibling().text if otherDefinition != None else None
+            # Derivatives
+            derivative = groupItem.findChild(class_='ode')
+            derivativeDesc = derivative.find_next_sibling().text if derivative != None else None
             
-            # Action Word
-            otherDef = {
-                'ode': otherDefinition.findChild(class_='d').text if otherDefinition != None else None,
-                'ode_def': otherDefinitionDesc
+            
+            # Derivative Word
+            derivatedDefinition = {
+                'derivative': derivative.findChild(class_='d').text if derivative != None else None,
+                'derivative_def': derivativeDesc
             }
             
-            # Add to other Def to Parent
-            definitionItem['other'] = otherDef
+            definitionItem['derivative'] = derivatedDefinition
+
+            # Sayings
+            sayings = groupItem.findChildren(class_='ose') if groupItem.findChildren(class_='ose') != None else []
+            sayingsList = []
+            for saying in sayings:
+                sayingItem = {
+                    'saying': saying.text,
+                    'saying_desc': saying.find_next_sibling().text if saying.find_next_sibling() != None else None
+                }
+                sayingsList.append(sayingItem)
+
+            definitionItem['sayings'] = sayingsList
             rowData['definitions'].append(definitionItem) # add descriptionlist to "definition" property
 
         # pprint(rowData.get('definitions'), indent=3) # Preview Data
@@ -109,6 +148,6 @@ def Main(start, count, initDB=False):
     if(initDB):
         db.createDatabaseFile()
         db.createTable()
-        LoopThrough.loopThrough(fun=App, end=count, start=start)
+        loopThrough(fun=App, end=count, start=start)
     else:
-        LoopThrough.loopThrough(fun=App, end=count, start=start)
+        loopThrough(fun=App, end=count, start=start)
