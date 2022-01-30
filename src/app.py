@@ -1,26 +1,28 @@
-from pprint import pprint
 from bs4 import BeautifulSoup as BS
 from wordType import wordType
+from main import DatabaseError
 from LoopThrough import loopThrough
-import requests
 import db
 import json
 
 # Resource Sample
 # sample_url = requests.get("https://sil-philippines-languages.org/online/ivb/dict/lexicon/lx00003.html")
 
-def App(_url, index):
+def App(text):
     '''
     Row Data Structure\n
     '''
     try:
         rowData = {}
-        get = requests.get(_url)    
-        doc = BS(get.text, 'html.parser')
+        doc = BS(text, 'html.parser')
         
+        # Fetch Group HTML
         group = doc.find(class_="lxGroup")
+        # Get "Word"
         title = group.findChild(class_='lx').findChild(class_="d")
+        # TODO: Parse Origin Type
         wordOrigin =  group.findChild(class_='dc').findChild(class_='d').text if group.findChild(class_='dc') != None else 'N/A'
+        # Definition Group
         definitionGroups = group.find_all(class_='psGroup') # Description List
 
         rowData["title"] = title.text # Title
@@ -29,20 +31,18 @@ def App(_url, index):
 
         # Description Sections
         for groupItem in definitionGroups:
-
             # Description List
             definitionItem = {} # definition Item
             exampleList = [] # Example List
-            
-            # Type
+            # Get Defintion Item Group Type
             defType = groupItem.findChild(class_='ps')
             definitionItem['type'] = wordType(defType.get_attribute_list('class')[-1])
             
-            # Definition
+            # Definition's Description
             descriptions = groupItem.findChild(class_='gl')
             definitionItem['description'] = descriptions.text
 
-            # Variants
+            # Word Variants
             ilokanoWord = groupItem.findChild(class_="iiGroup")
             variant = {} # Word Variants
             variant['ilokano'] = ilokanoWord.findChild(class_='d').text if ilokanoWord != None else None
@@ -53,7 +53,7 @@ def App(_url, index):
             
             definitionItem['variant'] = variant # set the word Variants
 
-            # Example Group
+            # Sample Groups
             for sampleGroup in groupItem.find_all(class_="exGroup"):
                 sampleItem = {}
                 
@@ -131,19 +131,14 @@ def App(_url, index):
         # pprint(rowData.get('definitions'), indent=3) # Preview Data
         data = (rowData.get('title'), rowData.get('origin'), json.dumps(rowData.get('definitions')),)
         db.insertInto(data) # commit to Database
+        
 
     except Exception as e:
-        print("NETWORK ERROR")
+        print("Database Error")
         print(e)
-        print(f"\nError Ended at Index {index}") # Page Index where the Error Occured
+        raise DatabaseError("")
 
-# db.createDatabaseFile()
-# db.createTable()
-
-# LoopThrough.loopThrough(fun=App, end=2) # loop through each page
-# end propert represents the limit (1 -> end)
-
-
+# Start App
 def Main(start, count, initDB=False):
     if(initDB):
         db.createDatabaseFile()

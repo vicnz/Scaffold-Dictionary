@@ -1,6 +1,10 @@
 import app as app
 import sys
 
+# Custom Error for Database Issues
+class DatabaseError(Exception):
+    pass
+
 def runCommand():
 
     countVal = 10
