@@ -2,13 +2,15 @@ from bs4 import BeautifulSoup as BS
 from wordType import wordType
 from main import DatabaseError
 from LoopThrough import loopThrough
+from os import path
+import sys
 import db
 import json
-
+from log import logger
 # Resource Sample
 # sample_url = requests.get("https://sil-philippines-languages.org/online/ivb/dict/lexicon/lx00003.html")
 
-def App(text):
+def App(text, currentIndex):
     '''
     Row Data Structure\n
     '''
@@ -56,14 +58,15 @@ def App(text):
             # Sample Groups
             for sampleGroup in groupItem.find_all(class_="exGroup"):
                 sampleItem = {}
-                
                 # Ivatan Sample
                 ivatanExample = sampleGroup.findChild(class_='ex')
                 # English Translation
                 englishTranslation = sampleGroup.findChild(class_='tr')
+
                 sampleItem['sample'] = ivatanExample.findChild(class_='d').text
                 sampleItem['translation'] = englishTranslation.findChild(class_='d').text
-                exampleList.append(sampleItem)
+                if(sampleItem['sample'] != None and sampleItem['translation'] != None):
+                    exampleList.append(sampleItem)
 
             definitionItem['samples'] = exampleList # add list to the parent object
 
@@ -80,27 +83,40 @@ def App(text):
             semanticsSampleList = []
             for semanticSample in semantics:
                 semanticsSampleList.append(semanticSample.text)
-            definitionItem['semantics'] = semanticsSampleList;
+
+            definitionItem['semantics'] = semanticsSampleList if len(semanticsSampleList) > 0 else None
 
             # Morphonemics
             morphophonemics = groupItem.findChildren(class_='mo') if groupItem.findChildren(class_='mo') != None else []
             morphophonemicsList = []
             for morpho in morphophonemics:
                 morphophonemicsList.append(morpho.text)
-            definitionItem['morphophonemics'] = morphophonemicsList
+            definitionItem['morphophonemics'] = morphophonemicsList if len(morphophonemicsList) > 0 else None
 
             # Synonyms Words
-            synonyms = groupItem.findChild(class_='rsGroup')
-            
+            synonyms = groupItem.findChild(class_='rsGroup').findChild(class_='d') if groupItem.findChild(class_='rsGroup') != None else []
+            synonymsList = []
+            for synonym in synonyms:
+                if synonym.text != None:
+                    synonymsList.append(synonym.text)
+
             #related
-            relatedWords = groupItem.findChild(class_='reGroup')
+            relatedWords = groupItem.findChild(class_='reGroup').findChild(class_='d') if groupItem.findChild(class_='reGroup') else []
+            relatedWordsList = []
+            for related in relatedWords:
+                if(related.text != None):
+                    relatedWordsList.append(related.text)
 
             # Antonyms
-            antonyms = groupItem.findChild(class_='raGroup')        
+            antonyms = groupItem.findChild(class_='raGroup').findChild(class_='d') if groupItem.findChild(class_='raGroup') != None else []        
+            antonymsList = []
+            for antonym in antonyms:
+                if(antonym.text != None):
+                    antonymsList.append(antonym.text)
             
-            definitionItem['synonym'] = synonyms.text if synonyms != None else None
-            definitionItem['related'] = relatedWords.text if relatedWords != None else None
-            definitionItem['antonym'] = antonyms.text if antonyms != None else None
+            definitionItem['synonym'] = synonymsList if len(synonymsList) > 0 else None
+            definitionItem['related'] = relatedWordsList if len(relatedWords) > 0 else None
+            definitionItem['antonym'] = antonymsList if len(antonymsList) > 0 else None
 
             # Derivatives
             derivative = groupItem.findChild(class_='ode')
@@ -112,9 +128,8 @@ def App(text):
                 'derivative': derivative.findChild(class_='d').text if derivative != None else None,
                 'derivative_def': derivativeDesc
             }
+            definitionItem['derivative'] = derivatedDefinition if(derivatedDefinition['derivative'] != None and derivatedDefinition['derivative_def'] != None) else None
             
-            definitionItem['derivative'] = derivatedDefinition
-
             # Sayings
             sayings = groupItem.findChildren(class_='ose') if groupItem.findChildren(class_='ose') != None else []
             sayingsList = []
@@ -123,26 +138,31 @@ def App(text):
                     'saying': saying.text,
                     'saying_desc': saying.find_next_sibling().text if saying.find_next_sibling() != None else None
                 }
-                sayingsList.append(sayingItem)
+                if(sayingItem['saying'] != None and sayingItem['saying_desc'] != None):
+                    sayingsList.append(sayingItem)
 
-            definitionItem['sayings'] = sayingsList
+            definitionItem['sayings'] = sayingsList if(len(sayingsList) > 0) else None 
             rowData['definitions'].append(definitionItem) # add descriptionlist to "definition" property
 
         # pprint(rowData.get('definitions'), indent=3) # Preview Data
-        data = (rowData.get('title'), rowData.get('origin'), json.dumps(rowData.get('definitions')),)
-        db.insertInto(data) # commit to Database
+        data = (rowData.get('title'), rowData.get('origin'), json.dumps(rowData.get('definitions')), 0)
+        db.insertInto(data, currentIndex=currentIndex) # commit to Database
         
 
     except Exception as e:
-        print("Database Error")
-        print(e)
+        print("Database Insert Error")
+        logger.error(f"file: {__file__} -> {e}")
         raise DatabaseError("")
 
 # Start App
-def Main(start, count, initDB=False):
+def Main(start, count, initDB):
     if(initDB):
         db.createDatabaseFile()
         db.createTable()
         loopThrough(fun=App, end=count, start=start)
     else:
-        loopThrough(fun=App, end=count, start=start)
+        if path.exists('data.sqlite'):
+            loopThrough(fun=App, end=count, start=start)
+        else:
+            print("Database File Does Not Exist\nPrefer Running with flag \'--init\' to intialize Database file\nBefore running consecutive runs")
+            sys.exit()

@@ -1,6 +1,6 @@
 import os
-from posixpath import curdir
 import sqlite3
+from log import logger
 
 # Constants
 CURRENT_DB = os.getcwd() + "\\src\\" + 'data.sqlite'
@@ -32,17 +32,19 @@ def createTable():
         CREATE TABLE IF NOT EXISTS {TABLE_NAME}(
             word TEXT PRIMARY KEY,
             origin TEXT,
-            definitions JSON NOT NULL
+            definitions JSON NOT NULL,
+            isFavorite INTEGER DEFAULT 0
         );
         '''
         db.execute(createSQL)
     except Exception as e:
-        print("Error Creating Table", e)
+        print("Error Creating Table ", e)
+        logger.error(f"file: {__file__} -> {e}")
     finally:
         db.close() # Close Database Connection
 
 # make sure database exists already
-def insertInto(data):
+def insertInto(data, currentIndex):
     f'''
     Insert Into Table {TABLE_NAME}
     '''
@@ -51,14 +53,15 @@ def insertInto(data):
         insertSQL = f'''
         INSERT INTO {TABLE_NAME}
         VALUES
-        (?, ?, ?)
+        (?, ?, ?, ?)
         '''
         cursor = db.cursor()
         cursor.execute(insertSQL, data)
         db.commit()
-        print("Item Added ", cursor.lastrowid, " = [word] -> ", data[0])
+        print("Item Added ", currentIndex, " = [word] -> ", data[0])
     except Exception as e:
-        print("Error Creating Table", e.with_traceback)
+        print("Error Database Insertion", e)
+        logger.error(f"file: {__file__} -> {e}")
         raise Exception("Database Error")
     finally:
         cursor.close()

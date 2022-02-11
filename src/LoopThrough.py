@@ -1,5 +1,6 @@
 from requests import get
 from main import DatabaseError
+from log import logger
 
 def loopThrough(fun, end, start = 1):
     '''
@@ -19,14 +20,18 @@ def loopThrough(fun, end, start = 1):
         try:
             request = get(parced_string);
             if request.ok :
-                fun(request.text, index=i) # operate on the string operation
+                fun(request.text, currentIndex=i) # operate on the string operation
             else:
                 raise Exception("Connection Error")
         except DatabaseError as e:
             print(f"Connection Error\nError at Index [{i}]")
+            logger.error(f"file: {__file__} -> {e}")
+            print(e)
             break
         except Exception as e:
             print(f"Connection Error\nError at Index [{i}]")
+            logger.error(f"file: {__file__} -> {e}")
+            print(e)
             break
 
         i = i + 1

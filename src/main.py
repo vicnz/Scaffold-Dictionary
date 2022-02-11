@@ -1,5 +1,6 @@
 import app as app
 import sys
+from os import path
 
 # Custom Error for Database Issues
 class DatabaseError(Exception):
@@ -9,7 +10,7 @@ def runCommand():
 
     countVal = 10
     startVal = 1
-    initDB = True
+    initDB = False
 
     def showHelp():
         message = '''
@@ -34,8 +35,6 @@ USAGE:
             print("ARGUMENT ERROR FOR '--count'")
             showHelp()
             return None
-    else:
-        pass
 
     if "--start" in sys.argv:
         startIndex = sys.argv.index("--start")
@@ -47,14 +46,11 @@ USAGE:
             print("ARGUMENT ERROR FOR '--start'")
             showHelp()
             return None
-    else:
-        pass
 
     # create Database
     if "--init" in sys.argv:
+        initDB = True
         print("Initialized Database")
-    else:
-        pass
     
     if(countVal < startVal):
         print(f"START [{startVal}] CANNOT BE GREATER THAN THE COUNT [{countVal}]")
