@@ -80,3 +80,14 @@ python src/main.py --start 99 --count 500
 ```
 > this will return an error because item **99** and **100** overlapped already
  
+---
+
+## Generate Words List
+
+generate a list of words as a **JSON** file
+
+```bash
+python src/words.py
+```
+
+> This will give an **error** if the database has not been created yet
