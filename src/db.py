@@ -1,6 +1,8 @@
 import os
 import sqlite3
 from log import logger
+from encoder_method import encodeAccentLetters
+from pprint import pprint
 
 # Constants
 CURRENT_DB = os.getcwd() + "\\src\\" + 'data.sqlite'
@@ -66,3 +68,26 @@ def insertInto(data, currentIndex):
     finally:
         cursor.close()
         db.close() # Close Database Connection
+
+def test_query():
+    db = None
+    try:
+        db = sqlite3.connect(CURRENT_DB)
+        sql = '''
+        SELECT * FROM dictionary
+        '''
+        crs = db.cursor()
+        rows = crs.execute(sql).fetchall()
+        crs.close()
+        i = 1
+        for row in rows:
+            pprint(row)
+            i = i +1
+        print(f"Last Index {i}")
+    except Exception as e:
+        pprint(e)
+    finally:
+        db.close()
+# Dev Testing
+if __name__ == '__main__':
+    test_query()
